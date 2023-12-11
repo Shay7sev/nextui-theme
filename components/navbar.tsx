@@ -18,9 +18,10 @@ import NextLink from "next/link";
 import clsx from "clsx";
 
 import { ThemeSwitch } from "@/components/theme-switch";
-import { SearchIcon } from "@/components/icons";
+import { HeartFilledIcon, SearchIcon } from "@/components/icons";
 
 import { Logo } from "@/components/icons";
+import { Button } from "@nextui-org/button";
 
 export const Navbar = () => {
   const searchInput = (
@@ -77,6 +78,16 @@ export const Navbar = () => {
           <ThemeSwitch />
         </NavbarItem>
         <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem>
+        <NavbarItem className="hidden sm:flex">
+          <Button
+            isExternal
+            as={Link}
+            isIconOnly
+            className="text-sm font-normal text-default-600 bg-default-100"
+            variant="flat">
+            <HeartFilledIcon className="text-danger" />
+          </Button>
+        </NavbarItem>
       </NavbarContent>
 
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">

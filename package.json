@@ -6,7 +6,8 @@
     "dev": "next dev -p 3210",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md,css}\""
   },
   "dependencies": {
     "@nextui-org/button": "2.0.26",

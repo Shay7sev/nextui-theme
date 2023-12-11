@@ -40,7 +40,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
           (parentRef as any).removeChild(canvas);
         });
         onChange();
-      }, 0.5);
+      }, 0.1);
     });
   };
 
