@@ -3,6 +3,7 @@ import { fontSans } from "@/config/fonts";
 import { Providers } from "./providers";
 import { Navbar } from "@/components/navbar";
 import clsx from "clsx";
+import { TailwindIndicator } from "@/components/tailwind-indicator";
 
 export default function RootLayout({
   children,
@@ -21,10 +22,11 @@ export default function RootLayout({
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
           <div className="relative flex flex-col h-screen">
             <Navbar />
-            <main className="container mx-auto max-w-7xl pt-16 px-6 flex-grow">
+            <main className="container mx-auto max-w-7xl px-6 flex-grow">
               {children}
             </main>
           </div>
+          <TailwindIndicator />
         </Providers>
       </body>
     </html>

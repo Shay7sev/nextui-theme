@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Navbar as NextUINavbar,
   NavbarContent,
@@ -22,6 +24,14 @@ import { HeartFilledIcon, SearchIcon } from "@/components/icons";
 
 import { Logo } from "@/components/icons";
 import { Button } from "@nextui-org/button";
+
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownSection,
+  DropdownItem,
+} from "@nextui-org/dropdown";
 
 export const Navbar = () => {
   const searchInput = (
@@ -54,7 +64,7 @@ export const Navbar = () => {
             <p className="font-bold text-inherit">ACME</p>
           </NextLink>
         </NavbarBrand>
-        <ul className="hidden lg:flex gap-4 justify-start ml-2">
+        <ul className="hidden sm:flex gap-4 justify-start ml-2">
           {siteConfig.navItems.map((item) => (
             <NavbarItem key={item.href}>
               <NextLink
@@ -79,14 +89,38 @@ export const Navbar = () => {
         </NavbarItem>
         <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem>
         <NavbarItem className="hidden sm:flex">
-          <Button
-            isExternal
-            as={Link}
-            isIconOnly
-            className="text-sm font-normal text-default-600 bg-default-100"
-            variant="flat">
-            <HeartFilledIcon className="text-danger" />
-          </Button>
+          <Dropdown>
+            <DropdownTrigger>
+              <Button
+                isExternal
+                as={Link}
+                isIconOnly
+                className="text-sm font-normal text-default-600 bg-default-100"
+                variant="flat">
+                <HeartFilledIcon className="text-danger" />
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu aria-label="Dropdown menu with description">
+              <DropdownSection title="Actions" showDivider>
+                <DropdownItem
+                  key="new"
+                  description="user@mail.com"
+                  startContent={<HeartFilledIcon className="text-danger" />}>
+                  User name
+                </DropdownItem>
+              </DropdownSection>
+              <DropdownSection title="">
+                <DropdownItem key="copy">Profile</DropdownItem>
+                <DropdownItem key="edit">Setting</DropdownItem>
+                <DropdownItem
+                  key="delete"
+                  className="text-danger"
+                  color="danger">
+                  Logout
+                </DropdownItem>
+              </DropdownSection>
+            </DropdownMenu>
+          </Dropdown>
         </NavbarItem>
       </NavbarContent>
 

@@ -28,20 +28,30 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
 
   const canvasRef = useRef();
 
-  const handleSwitch = (event: any) => {
+  const handleSwitch = async (event: any) => {
     const containerRef = document.getElementById("body");
     const parentRef = document.getElementById("html");
 
-    toCanvas(containerRef as any).then((canvas: any) => {
-      canvasRef.current = canvas;
-      (parentRef as any).appendChild(canvas);
-      setTimeout(() => {
-        crop(canvas, event, { reverse: theme === "dark" }).then(() => {
-          (parentRef as any).removeChild(canvas);
-        });
-        onChange();
-      }, 0.1);
-    });
+    const canvas = await toCanvas(containerRef as any);
+    canvasRef.current = canvas as any;
+    (parentRef as any).appendChild(canvas);
+    setTimeout(() => {
+      crop(canvas, event, { reverse: theme === "dark" }).then(() => {
+        (parentRef as any).removeChild(canvas);
+      });
+      onChange();
+    }, 0.1);
+
+    // toCanvas(containerRef as any).then((canvas: any) => {
+    //   canvasRef.current = canvas;
+    //   (parentRef as any).appendChild(canvas);
+    //   setTimeout(() => {
+    //     crop(canvas, event, { reverse: theme === "dark" }).then(() => {
+    //       (parentRef as any).removeChild(canvas);
+    //     });
+    //     onChange();
+    //   }, 0.1);
+    // });
   };
 
   const {
