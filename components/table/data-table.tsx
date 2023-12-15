@@ -27,6 +27,7 @@ import {
   PlusIcon,
   SearchIcon,
   VerticalDotsIcon,
+  Logo,
 } from "../icons";
 
 const columns = [
@@ -158,7 +159,9 @@ export const DataTable = () => {
           <User
             avatarProps={{
               radius: "lg",
-              src: user.avatar,
+              // util html-to-image img cors bug
+              // src: user.avatar,
+              fallback: <Logo />,
             }}
             description={user.email}
             name={cellValue}>

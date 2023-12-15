@@ -1,4 +1,13 @@
-import dom2element from "dom-to-image";
+// import dom2element from "dom-to-image";
+
+// some css unsupport
+// import html2canvas from "html2canvas";
+
+// relace dom-to-image but cors
+import * as htmlToImage from "html-to-image";
+
+// position error
+// import { domToPng } from "modern-screenshot";
 
 /**
  *
@@ -7,25 +16,31 @@ import dom2element from "dom-to-image";
  */
 export function toCanvas(el: any) {
   return new Promise((resolve) => {
-    dom2element.toPng(el).then((pngDataURI) => {
-      const canvas = document.createElement("canvas");
-      const rect = el.getBoundingClientRect();
-      canvas.style.position = "fixed";
-      canvas.style.left = rect.left + "px";
-      canvas.style.top = rect.top + "px";
-      canvas.style.zIndex = "40";
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      canvas.style.width = rect.width + "px";
-      canvas.style.height = rect.height + "px";
-      const context = canvas.getContext("2d");
-      const img = new Image();
-      img.onload = () => {
-        context?.drawImage(img, 0, 0);
-        setTimeout(() => resolve(canvas));
-      };
-      img.src = pngDataURI;
-    });
+    htmlToImage
+      .toPng(el, {
+        pixelRatio: window.devicePixelRatio,
+        cacheBust: true,
+      })
+      .then((pngDataURI) => {
+        const canvas = document.createElement("canvas");
+        const rect = el.getBoundingClientRect();
+        canvas.style.position = "fixed";
+        canvas.style.left = rect.left + "px";
+        canvas.style.top = rect.top + "px";
+        canvas.style.zIndex = "40";
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+        canvas.style.width = rect.width + "px";
+        canvas.style.height = rect.height + "px";
+        const context = canvas.getContext("2d");
+        const img = new Image();
+        img.onload = () => {
+          context?.drawImage(img, 0, 0);
+          setTimeout(() => resolve(canvas));
+        };
+        img.crossOrigin = "Anonymous";
+        img.src = pngDataURI;
+      });
   });
 }
 
