@@ -29,6 +29,8 @@ import {
   VerticalDotsIcon,
   Logo,
 } from "../icons";
+import { MixerHorizontalIcon } from "@radix-ui/react-icons";
+import clsx from "clsx";
 
 const columns = [
   { name: "ID", uid: "id", sortable: true },
@@ -84,7 +86,30 @@ const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
 
 type User = (typeof users)[0];
 
-export const DataTable = () => {
+type DataTableProps = {
+  size?: "sm" | "md" | "lg";
+  selectionBehavior?: "toggle" | "replace" | undefined;
+  setColumns?: boolean;
+};
+
+export const DataTable: React.FC<DataTableProps> = ({
+  size = "sm",
+  selectionBehavior = "replace",
+  setColumns = true,
+}) => {
+  const getSvgSize = (size: "sm" | "md" | "lg") => {
+    switch (size) {
+      case "sm":
+        return 14;
+      case "md":
+        return 24;
+      case "lg":
+        return 36;
+      default:
+        return 24;
+    }
+  };
+
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState<Selection>(
     new Set([])
@@ -247,21 +272,23 @@ export const DataTable = () => {
     return (
       <div className="flex flex-col gap-4">
         <div className="flex justify-between gap-3 items-end">
-          <Input
-            isClearable
-            className="w-full sm:max-w-[44%] h-auto"
-            placeholder="Search by name..."
-            startContent={<SearchIcon />}
-            labelPlacement={"outside"}
-            value={filterValue}
-            onClear={() => onClear()}
-            onValueChange={onSearchChange}
-          />
           <div className="flex gap-3">
+            <Input
+              isClearable
+              size={size}
+              className="w-full sm:max-w-[44%] h-auto"
+              placeholder="Search by name..."
+              startContent={<SearchIcon size={getSvgSize(size)} />}
+              labelPlacement={"outside"}
+              value={filterValue}
+              onClear={() => onClear()}
+              onValueChange={onSearchChange}
+            />
             <Dropdown>
               <DropdownTrigger className="hidden sm:flex">
                 <Button
                   variant="flat"
+                  size={size}
                   endContent={<ChevronDownIcon className="text-small" />}>
                   Status
                 </Button>
@@ -280,12 +307,19 @@ export const DataTable = () => {
                 ))}
               </DropdownMenu>
             </Dropdown>
+            <Button
+              color="primary"
+              className="hidden sm:flex"
+              endContent={<PlusIcon size={getSvgSize(size)} />}
+              size={size}>
+              Add New
+            </Button>
+          </div>
+          {setColumns ? (
             <Dropdown>
-              <DropdownTrigger className="hidden sm:flex">
-                <Button
-                  variant="flat"
-                  endContent={<ChevronDownIcon className="text-small" />}>
-                  Columns
+              <DropdownTrigger>
+                <Button size={size} variant="flat" isIconOnly>
+                  <MixerHorizontalIcon className="text-small" />
                 </Button>
               </DropdownTrigger>
               <DropdownMenu
@@ -302,19 +336,21 @@ export const DataTable = () => {
                 ))}
               </DropdownMenu>
             </Dropdown>
-            <Button color="primary" endContent={<PlusIcon />}>
-              Add New
-            </Button>
-          </div>
+          ) : (
+            <div></div>
+          )}
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-default-400 text-small">
-            Total {users.length} users
+          <span className={clsx(`text-default-400 text-${size}`)}>
+            共 {users.length} 条
           </span>
-          <label className="flex items-center text-default-400 text-small">
-            Rows per page:
+          <label
+            className={clsx(`flex items-center text-default-400 text-${size}`)}>
+            条/页:
             <select
-              className="bg-transparent outline-none text-default-400 text-small"
+              className={clsx(
+                `bg-transparent outline-none text-default-400 text-${size}`
+              )}
               onChange={onRowsPerPageChange}>
               <option value="5">5</option>
               <option value="10">10</option>
@@ -337,14 +373,19 @@ export const DataTable = () => {
   const bottomContent = React.useMemo(() => {
     return (
       <div className="py-2 px-2 flex justify-between items-center">
-        <span className="text-small text-default-400">
-          {selectedKeys === "all"
-            ? "All items selected"
-            : `${selectedKeys.size} of ${items.length} selected`}
-        </span>
+        {selectionBehavior === "toggle" ? (
+          <span className={clsx(`text-default-400 text-${size}`)}>
+            {selectedKeys === "all"
+              ? "已全选"
+              : `${selectedKeys.size} of ${items.length} 已选`}
+          </span>
+        ) : (
+          <span></span>
+        )}
         <Pagination
           isCompact
           showControls
+          size={size}
           showShadow
           color="primary"
           isDisabled={hasSearchFilter}
@@ -368,6 +409,7 @@ export const DataTable = () => {
       }}
       selectedKeys={selectedKeys}
       selectionMode="multiple"
+      selectionBehavior={selectionBehavior}
       sortDescriptor={sortDescriptor}
       topContent={topContent}
       topContentPlacement="outside"
