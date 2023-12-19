@@ -9,7 +9,6 @@ import {
   TableRow,
   TableCell,
   Selection,
-  SortDescriptor,
 } from "@nextui-org/table";
 import {
   Dropdown,
@@ -20,28 +19,11 @@ import {
 import { Pagination } from "@nextui-org/pagination";
 import { Button } from "@nextui-org/button";
 import { Input } from "@nextui-org/input";
-import { User } from "@nextui-org/user";
-import { Chip, ChipProps } from "@nextui-org/chip";
-import {
-  ChevronDownIcon,
-  PlusIcon,
-  SearchIcon,
-  VerticalDotsIcon,
-  Logo,
-} from "../icons";
+import { ChevronDownIcon, PlusIcon, SearchIcon } from "../icons";
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 import clsx from "clsx";
-
-const columns = [
-  { name: "ID", uid: "id", sortable: true },
-  { name: "NAME", uid: "name", sortable: true },
-  { name: "AGE", uid: "age", sortable: true },
-  { name: "ROLE", uid: "role", sortable: true },
-  { name: "TEAM", uid: "team" },
-  { name: "EMAIL", uid: "email" },
-  { name: "STATUS", uid: "status", sortable: true },
-  { name: "ACTIONS", uid: "actions" },
-];
+import { DataTableColumnProps } from "./interface";
+import { AsyncListData } from "@react-stately/data";
 
 const statusOptions = [
   { name: "Active", uid: "active" },
@@ -76,27 +58,27 @@ export function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-const statusColorMap: Record<string, ChipProps["color"]> = {
-  active: "success",
-  paused: "danger",
-  vacation: "warning",
-};
-
 const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
 
-type User = (typeof users)[0];
-
-type DataTableProps = {
+type DataTableProps<TData> = {
   size?: "sm" | "md" | "lg";
   selectionBehavior?: "toggle" | "replace" | undefined;
   setColumns?: boolean;
+  columns: DataTableColumnProps<TData>[];
+  data?: TData[];
+  list?: AsyncListData<TData>;
+  uniqueKey?: string;
 };
 
-export const DataTable: React.FC<DataTableProps> = ({
+export function DataTable<TData>({
   size = "sm",
   selectionBehavior = "replace",
   setColumns = true,
-}) => {
+  columns,
+  list,
+  data,
+  uniqueKey = "id",
+}: DataTableProps<TData>) {
   const getSvgSize = (size: "sm" | "md" | "lg") => {
     switch (size) {
       case "sm":
@@ -119,10 +101,6 @@ export const DataTable: React.FC<DataTableProps> = ({
   );
   const [statusFilter, setStatusFilter] = React.useState<Selection>("all");
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
-  const [sortDescriptor, setSortDescriptor] = React.useState<SortDescriptor>({
-    column: "age",
-    direction: "ascending",
-  });
 
   const [page, setPage] = React.useState(1);
 
@@ -165,74 +143,22 @@ export const DataTable: React.FC<DataTableProps> = ({
     return filteredItems.slice(start, end);
   }, [page, filteredItems, rowsPerPage]);
 
-  const sortedItems = React.useMemo(() => {
-    return [...items].sort((a: User, b: User) => {
-      const first = a[sortDescriptor.column as keyof User] as number;
-      const second = b[sortDescriptor.column as keyof User] as number;
-      const cmp = first < second ? -1 : first > second ? 1 : 0;
-
-      return sortDescriptor.direction === "descending" ? -cmp : cmp;
-    });
-  }, [sortDescriptor, items]);
-
-  const renderCell = React.useCallback((user: User, columnKey: React.Key) => {
-    const cellValue = user[columnKey as keyof User];
-
-    switch (columnKey) {
-      case "name":
-        return (
-          <User
-            avatarProps={{
-              radius: "lg",
-              // util html-to-image img cors bug
-              // src: user.avatar,
-              fallback: <Logo />,
-            }}
-            description={user.email}
-            name={cellValue}>
-            {user.email}
-          </User>
-        );
-      case "role":
-        return (
-          <div className="flex flex-col">
-            <p className="text-bold text-small capitalize">{cellValue}</p>
-            <p className="text-bold text-tiny capitalize text-default-400">
-              {user.team}
-            </p>
-          </div>
-        );
-      case "status":
-        return (
-          <Chip
-            className="capitalize"
-            color={statusColorMap[user.status]}
-            size="sm"
-            variant="flat">
-            {cellValue}
-          </Chip>
-        );
-      case "actions":
-        return (
-          <div className="relative flex justify-end items-center gap-2">
-            <Dropdown>
-              <DropdownTrigger>
-                <Button isIconOnly size="sm" variant="light">
-                  <VerticalDotsIcon className="text-default-300" />
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu>
-                <DropdownItem>View</DropdownItem>
-                <DropdownItem>Edit</DropdownItem>
-                <DropdownItem>Delete</DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
-          </div>
-        );
-      default:
-        return cellValue;
-    }
-  }, []);
+  const renderCell = React.useCallback(
+    (item: TData, columnKey: keyof TData) => {
+      const cellValue = item[columnKey as keyof TData];
+      let obj = columns?.find((m) => m.uid === columnKey);
+      if (obj) {
+        if (obj?.renderCell) {
+          return obj.renderCell(item, columnKey);
+        } else {
+          return <>{cellValue || ""}</>;
+        }
+      } else {
+        return <></>;
+      }
+    },
+    []
+  );
 
   // const onNextPage = React.useCallback(() => {
   //   if (page < pages) {
@@ -410,30 +336,34 @@ export const DataTable: React.FC<DataTableProps> = ({
       selectedKeys={selectedKeys}
       selectionMode="multiple"
       selectionBehavior={selectionBehavior}
-      sortDescriptor={sortDescriptor}
+      sortDescriptor={list && list.sortDescriptor}
       topContent={topContent}
       topContentPlacement="outside"
       onSelectionChange={setSelectedKeys}
-      onSortChange={setSortDescriptor}>
+      onSortChange={list && list.sort}>
       <TableHeader columns={headerColumns}>
         {(column) => (
           <TableColumn
             key={column.uid}
-            align={column.uid === "actions" ? "center" : "start"}
+            align={column.align ? column.align : "start"}
             allowsSorting={column.sortable}>
             {column.name}
           </TableColumn>
         )}
       </TableHeader>
-      <TableBody emptyContent={"No users found"} items={sortedItems}>
-        {(item) => (
-          <TableRow key={item.id}>
+      <TableBody
+        emptyContent={"No users found"}
+        items={list ? list.items : data}>
+        {(item: any) => (
+          <TableRow key={item[uniqueKey]}>
             {(columnKey) => (
-              <TableCell>{renderCell(item, columnKey)}</TableCell>
+              <TableCell>
+                {renderCell(item, columnKey as keyof TData)}
+              </TableCell>
             )}
           </TableRow>
         )}
       </TableBody>
     </Table>
   );
-};
+}
