@@ -98,6 +98,7 @@ export function DataTable<TData>({
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
 
   const [page, setPage] = React.useState(1);
+  const isFirstRender = React.useRef(true);
   const [total, setTotal] = React.useState(1);
 
   const hasSearchFilter = Boolean(filterValue);
@@ -166,9 +167,13 @@ export function DataTable<TData>({
     return data.list;
   }, [page, rowsPerPage]);
 
-  // React.useEffect(() => {
-  //   asyncTrigger();
-  // }, [page, rowsPerPage]);
+  React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    asyncTrigger();
+  }, [page, rowsPerPage]);
 
   let list: AsyncListData<TData> = useAsyncList<TData>({
     async load({ signal }: { signal: AbortSignal }) {
@@ -221,14 +226,12 @@ export function DataTable<TData>({
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       setRowsPerPage(Number(e.target.value));
       setPage(1);
-      asyncTrigger();
     },
     []
   );
 
   const onPageChange = React.useCallback((val: number) => {
     setPage(val);
-    asyncTrigger();
   }, []);
 
   const onSearchChange = React.useCallback((value?: string) => {
