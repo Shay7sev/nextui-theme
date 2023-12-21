@@ -23,7 +23,9 @@ import { ChevronDownIcon, PlusIcon, SearchIcon } from "../icons";
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 import clsx from "clsx";
 import { DataTableColumnProps } from "./interface";
-import { AsyncListData } from "@react-stately/data";
+import { AsyncListData, useAsyncList } from "@react-stately/data";
+import { getSvgSize } from "@/utils";
+import useSWRMutation from "swr/mutation";
 
 const statusOptions = [
   { name: "Active", uid: "active" },
@@ -65,8 +67,15 @@ type DataTableProps<TData> = {
   selectionBehavior?: "toggle" | "replace" | undefined;
   setColumns?: boolean;
   columns: DataTableColumnProps<TData>[];
-  data?: TData[];
-  list?: AsyncListData<TData>;
+  url?: string;
+  api: (
+    url: string,
+    {
+      arg,
+    }: {
+      arg: any;
+    }
+  ) => Promise<any>;
   uniqueKey?: string;
 };
 
@@ -75,23 +84,9 @@ export function DataTable<TData>({
   selectionBehavior = "replace",
   setColumns = true,
   columns,
-  list,
-  data,
+  api,
   uniqueKey = "id",
 }: DataTableProps<TData>) {
-  const getSvgSize = (size: "sm" | "md" | "lg") => {
-    switch (size) {
-      case "sm":
-        return 14;
-      case "md":
-        return 24;
-      case "lg":
-        return 36;
-      default:
-        return 24;
-    }
-  };
-
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState<Selection>(
     new Set([])
@@ -103,6 +98,7 @@ export function DataTable<TData>({
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
 
   const [page, setPage] = React.useState(1);
+  const [total, setTotal] = React.useState(1);
 
   const hasSearchFilter = Boolean(filterValue);
 
@@ -114,34 +110,31 @@ export function DataTable<TData>({
     );
   }, [visibleColumns]);
 
-  const filteredItems = React.useMemo(() => {
-    let filteredUsers = [...users];
+  // const filteredItems = React.useMemo(() => {
+  //   let filteredUsers = [...users];
 
-    if (hasSearchFilter) {
-      filteredUsers = filteredUsers.filter((user) =>
-        user.name.toLowerCase().includes(filterValue.toLowerCase())
-      );
-    }
-    if (
-      statusFilter !== "all" &&
-      Array.from(statusFilter).length !== statusOptions.length
-    ) {
-      filteredUsers = filteredUsers.filter((user) =>
-        Array.from(statusFilter).includes(user.status)
-      );
-    }
+  //   if (hasSearchFilter) {
+  //     filteredUsers = filteredUsers.filter((user) =>
+  //       user.name.toLowerCase().includes(filterValue.toLowerCase())
+  //     );
+  //   }
+  //   if (
+  //     statusFilter !== "all" &&
+  //     Array.from(statusFilter).length !== statusOptions.length
+  //   ) {
+  //     filteredUsers = filteredUsers.filter((user) =>
+  //       Array.from(statusFilter).includes(user.status)
+  //     );
+  //   }
 
-    return filteredUsers;
-  }, [users, filterValue, statusFilter]);
+  //   return filteredUsers;
+  // }, [users, filterValue, statusFilter]);
+  // const items = React.useMemo(() => {
+  //   const start = (page - 1) * rowsPerPage;
+  //   const end = start + rowsPerPage;
 
-  const pages = Math.ceil(filteredItems.length / rowsPerPage);
-
-  const items = React.useMemo(() => {
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-
-    return filteredItems.slice(start, end);
-  }, [page, filteredItems, rowsPerPage]);
+  //   return filteredItems.slice(start, end);
+  // }, [page, filteredItems, rowsPerPage]);
 
   const renderCell = React.useCallback(
     (item: TData, columnKey: keyof TData) => {
@@ -160,6 +153,58 @@ export function DataTable<TData>({
     []
   );
 
+  const { trigger } = useSWRMutation("/", api /* options */);
+
+  const asyncTrigger = React.useCallback(async () => {
+    let params = {
+      currentPage: page,
+      pageSize: rowsPerPage,
+    };
+    const response = await trigger(params);
+    const data = response.data;
+    setTotal(data.total);
+    return data.list;
+  }, [page, rowsPerPage]);
+
+  // React.useEffect(() => {
+  //   asyncTrigger();
+  // }, [page, rowsPerPage]);
+
+  let list: AsyncListData<TData> = useAsyncList<TData>({
+    async load({ signal }: { signal: AbortSignal }) {
+      false && console.log("signal", signal);
+      const data = await asyncTrigger();
+
+      // const response = await asyncTrigger();
+      // const data = response.data;
+      // setTotal(data.total);
+      return {
+        items: data,
+      };
+    },
+    async sort({ items, sortDescriptor }) {
+      return {
+        items: items.sort((a, b) => {
+          let first = a[sortDescriptor.column as keyof TData];
+          let second = b[sortDescriptor.column as keyof TData];
+          let cmp =
+            (parseInt(first as string) || first) <
+            (parseInt(second as string) || second)
+              ? -1
+              : 1;
+          if (sortDescriptor.direction === "descending") {
+            cmp *= -1;
+          }
+          return cmp;
+        }),
+      };
+    },
+  });
+
+  const pages = React.useMemo(() => {
+    return Math.ceil(total / rowsPerPage);
+  }, [total, rowsPerPage]);
+
   // const onNextPage = React.useCallback(() => {
   //   if (page < pages) {
   //     setPage(page + 1);
@@ -176,9 +221,15 @@ export function DataTable<TData>({
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       setRowsPerPage(Number(e.target.value));
       setPage(1);
+      asyncTrigger();
     },
     []
   );
+
+  const onPageChange = React.useCallback((val: number) => {
+    setPage(val);
+    asyncTrigger();
+  }, []);
 
   const onSearchChange = React.useCallback((value?: string) => {
     if (value) {
@@ -297,13 +348,15 @@ export function DataTable<TData>({
   ]);
 
   const bottomContent = React.useMemo(() => {
+    console.log("page", pages);
+
     return (
       <div className="py-2 px-2 flex justify-between items-center">
         {selectionBehavior === "toggle" ? (
           <span className={clsx(`text-default-400 text-${size}`)}>
             {selectedKeys === "all"
               ? "已全选"
-              : `${selectedKeys.size} of ${items.length} 已选`}
+              : `${selectedKeys.size} of ${total} 已选`}
           </span>
         ) : (
           <span></span>
@@ -318,11 +371,11 @@ export function DataTable<TData>({
           page={page}
           total={pages}
           variant="light"
-          onChange={setPage}
+          onChange={onPageChange}
         />
       </div>
     );
-  }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
+  }, [selectedKeys, total, page, pages, hasSearchFilter]);
 
   return (
     <Table
@@ -351,9 +404,7 @@ export function DataTable<TData>({
           </TableColumn>
         )}
       </TableHeader>
-      <TableBody
-        emptyContent={"No users found"}
-        items={list ? list.items : data}>
+      <TableBody emptyContent={"No users found"} items={list ? list.items : []}>
         {(item: any) => (
           <TableRow key={item[uniqueKey]}>
             {(columnKey) => (
