@@ -1,4 +1,4 @@
-export const getSvgSize = (size: "sm" | "md" | "lg") => {
+export const getSvgSize = (size?: "sm" | "md" | "lg") => {
   switch (size) {
     case "sm":
       return 14;
@@ -7,6 +7,6 @@ export const getSvgSize = (size: "sm" | "md" | "lg") => {
     case "lg":
       return 36;
     default:
-      return 24;
+      return 14;
   }
 };

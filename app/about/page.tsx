@@ -1,6 +1,6 @@
 "use client";
 
-import { Logo, VerticalDotsIcon } from "@/components/icons";
+import { Logo, PlusIcon, VerticalDotsIcon } from "@/components/icons";
 // import { title } from "@/components/primitives";
 import { DataTable } from "@/components/table/data-table";
 import { DataTableColumnProps } from "@/components/table/interface";
@@ -16,6 +16,8 @@ import {
 import { Button } from "@nextui-org/button";
 import { getAboutList } from "@/api/about";
 import { ResUser } from "@/api/about/typing";
+import { useMemo } from "react";
+import { getSvgSize } from "@/utils";
 
 export default function AboutPage() {
   const columns: DataTableColumnProps<ResUser>[] = [
@@ -97,10 +99,25 @@ export default function AboutPage() {
       },
     },
   ];
+  const operationContent = useMemo(() => {
+    return (
+      <Button
+        color="primary"
+        className="hidden sm:flex"
+        endContent={<PlusIcon size={getSvgSize()} />}
+        size={"sm"}>
+        Add New
+      </Button>
+    );
+  }, []);
   return (
     <div className="w-full h-auto">
       {/* <h1 className={title({ color: "violet" })}>About</h1> */}
-      <DataTable<ResUser> columns={columns} api={getAboutList} />
+      <DataTable<ResUser>
+        columns={columns}
+        api={getAboutList}
+        operationContent={operationContent}
+      />
     </div>
   );
 }

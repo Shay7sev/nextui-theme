@@ -9,6 +9,7 @@ import {
   TableRow,
   TableCell,
   Selection,
+  SortDescriptor,
 } from "@nextui-org/table";
 import {
   Dropdown,
@@ -19,11 +20,11 @@ import {
 import { Pagination } from "@nextui-org/pagination";
 import { Button } from "@nextui-org/button";
 import { Input } from "@nextui-org/input";
-import { ChevronDownIcon, PlusIcon, SearchIcon } from "../icons";
+import { Spinner } from "@nextui-org/spinner";
+import { ChevronDownIcon, SearchIcon } from "../icons";
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 import clsx from "clsx";
 import { DataTableColumnProps } from "./interface";
-import { AsyncListData, useAsyncList } from "@react-stately/data";
 import { getSvgSize } from "@/utils";
 import useSWRMutation from "swr/mutation";
 
@@ -65,8 +66,10 @@ const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
 type DataTableProps<TData> = {
   size?: "sm" | "md" | "lg";
   selectionBehavior?: "toggle" | "replace" | undefined;
+  selectionMode?: "single" | "multiple" | "none";
   setColumns?: boolean;
   columns: DataTableColumnProps<TData>[];
+  operationContent?: React.JSX.Element;
   url?: string;
   api: (
     url: string,
@@ -81,15 +84,17 @@ type DataTableProps<TData> = {
 
 export function DataTable<TData>({
   size = "sm",
-  selectionBehavior = "replace",
+  selectionBehavior = "toggle",
+  selectionMode = "none",
   setColumns = true,
   columns,
   api,
   uniqueKey = "id",
+  operationContent,
 }: DataTableProps<TData>) {
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState<Selection>(
-    new Set([])
+    new Set([""])
   );
   const [visibleColumns, setVisibleColumns] = React.useState<Selection>(
     new Set(INITIAL_VISIBLE_COLUMNS)
@@ -98,8 +103,8 @@ export function DataTable<TData>({
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
 
   const [page, setPage] = React.useState(1);
-  const isFirstRender = React.useRef(true);
   const [total, setTotal] = React.useState(1);
+  const [data, setData] = React.useState([]);
 
   const hasSearchFilter = Boolean(filterValue);
 
@@ -154,7 +159,7 @@ export function DataTable<TData>({
     []
   );
 
-  const { trigger } = useSWRMutation("/", api /* options */);
+  const { trigger, isMutating } = useSWRMutation("/", api /* options */);
 
   const asyncTrigger = React.useCallback(async () => {
     let params = {
@@ -164,47 +169,24 @@ export function DataTable<TData>({
     const response = await trigger(params);
     const data = response.data;
     setTotal(data.total);
-    return data.list;
+    setData(data.list);
   }, [page, rowsPerPage]);
 
   React.useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
     asyncTrigger();
   }, [page, rowsPerPage]);
 
-  let list: AsyncListData<TData> = useAsyncList<TData>({
-    async load({ signal }: { signal: AbortSignal }) {
-      false && console.log("signal", signal);
-      const data = await asyncTrigger();
+  const [sortDescriptor, setSortDescriptor] = React.useState<SortDescriptor>();
 
-      // const response = await asyncTrigger();
-      // const data = response.data;
-      // setTotal(data.total);
-      return {
-        items: data,
-      };
-    },
-    async sort({ items, sortDescriptor }) {
-      return {
-        items: items.sort((a, b) => {
-          let first = a[sortDescriptor.column as keyof TData];
-          let second = b[sortDescriptor.column as keyof TData];
-          let cmp =
-            (parseInt(first as string) || first) <
-            (parseInt(second as string) || second)
-              ? -1
-              : 1;
-          if (sortDescriptor.direction === "descending") {
-            cmp *= -1;
-          }
-          return cmp;
-        }),
-      };
-    },
-  });
+  const sortedItems = React.useMemo(() => {
+    return [...data].sort((a: TData, b: TData) => {
+      const first = a[sortDescriptor?.column as keyof TData] as number;
+      const second = b[sortDescriptor?.column as keyof TData] as number;
+      const cmp = first < second ? -1 : first > second ? 1 : 0;
+
+      return sortDescriptor?.direction === "descending" ? -cmp : cmp;
+    });
+  }, [sortDescriptor, data]);
 
   const pages = React.useMemo(() => {
     return Math.ceil(total / rowsPerPage);
@@ -287,13 +269,7 @@ export function DataTable<TData>({
                 ))}
               </DropdownMenu>
             </Dropdown>
-            <Button
-              color="primary"
-              className="hidden sm:flex"
-              endContent={<PlusIcon size={getSvgSize(size)} />}
-              size={size}>
-              Add New
-            </Button>
+            {operationContent}
           </div>
           {setColumns ? (
             <Dropdown>
@@ -351,8 +327,6 @@ export function DataTable<TData>({
   ]);
 
   const bottomContent = React.useMemo(() => {
-    console.log("page", pages);
-
     return (
       <div className="py-2 px-2 flex justify-between items-center">
         {selectionBehavior === "toggle" ? (
@@ -370,7 +344,7 @@ export function DataTable<TData>({
           size={size}
           showShadow
           color="primary"
-          isDisabled={hasSearchFilter}
+          isDisabled={isMutating}
           page={page}
           total={pages}
           variant="light"
@@ -390,13 +364,13 @@ export function DataTable<TData>({
         wrapper: "max-h-[382px]",
       }}
       selectedKeys={selectedKeys}
-      selectionMode="multiple"
+      selectionMode={selectionMode}
       selectionBehavior={selectionBehavior}
-      sortDescriptor={list && list.sortDescriptor}
+      sortDescriptor={sortDescriptor}
       topContent={topContent}
       topContentPlacement="outside"
       onSelectionChange={setSelectedKeys}
-      onSortChange={list && list.sort}>
+      onSortChange={setSortDescriptor}>
       <TableHeader columns={headerColumns}>
         {(column) => (
           <TableColumn
@@ -407,7 +381,13 @@ export function DataTable<TData>({
           </TableColumn>
         )}
       </TableHeader>
-      <TableBody emptyContent={"No users found"} items={list ? list.items : []}>
+      <TableBody
+        // emptyContent={"No users found"}
+        items={sortedItems}
+        loadingContent={<Spinner />}
+        loadingState={
+          isMutating || sortedItems.length === 0 ? "loading" : "idle"
+        }>
         {(item: any) => (
           <TableRow key={item[uniqueKey]}>
             {(columnKey) => (
