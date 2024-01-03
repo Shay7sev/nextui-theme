@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useRef } from "react";
+import { FC, useCallback, useEffect, useRef } from "react";
 // import { VisuallyHidden } from "@react-aria/visually-hidden";
 import { SwitchProps, useSwitch } from "@nextui-org/switch";
 import { useTheme } from "next-themes";
@@ -9,6 +9,8 @@ import clsx from "clsx";
 
 import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
 import { crop, toCanvas } from "@/app/util";
+
+import "./styles/theme.css";
 
 export interface ThemeSwitchProps {
   className?: string;
@@ -53,6 +55,48 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
     //   }, 0.1);
     // });
   };
+
+  useEffect(() => {
+    let e: any;
+    false && handleSwitch(e);
+  }, []);
+
+  const toggleTheme = useCallback(
+    (event: React.MouseEvent<Element, MouseEvent>) => {
+      const x = event.clientX;
+      const y = event.clientY;
+      const endRadius = Math.hypot(
+        Math.max(x, innerWidth - x),
+        Math.max(y, innerHeight - y)
+      );
+
+      // @ts-ignore
+      const transition = document.startViewTransition(() => {
+        onChange();
+      });
+
+      transition.ready.then(() => {
+        const clipPath = [
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${endRadius}px at ${x}px ${y}px)`,
+        ];
+        document.documentElement.animate(
+          {
+            clipPath: theme === "dark" ? clipPath.reverse() : clipPath,
+          },
+          {
+            duration: 500,
+            easing: "ease-in",
+            pseudoElement:
+              theme === "dark"
+                ? "::view-transition-old(root)"
+                : "::view-transition-new(root)",
+          }
+        );
+      });
+    },
+    [theme]
+  );
 
   const {
     // Component,
@@ -115,7 +159,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
     //   </div>
     // </Component>
     <div
-      onClick={handleSwitch}
+      onClick={toggleTheme}
       className={clsx(
         "px-px transition-opacity hover:opacity-80 cursor-pointer",
         className,
