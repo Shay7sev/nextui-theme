@@ -34,29 +34,6 @@ const statusOptions = [
   { name: "Vacation", uid: "vacation" },
 ];
 
-const users = [
-  {
-    id: 1,
-    name: "Tony Reichert",
-    role: "CEO",
-    team: "Management",
-    status: "active",
-    age: "29",
-    avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d",
-    email: "tony.reichert@example.com",
-  },
-  {
-    id: 2,
-    name: "Zoey Lang",
-    role: "Tech Lead",
-    team: "Development",
-    status: "paused",
-    age: "25",
-    avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
-    email: "zoey.lang@example.com",
-  },
-];
-
 export function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
@@ -115,32 +92,6 @@ export function DataTable<TData>({
       Array.from(visibleColumns).includes(column.uid)
     );
   }, [visibleColumns]);
-
-  // const filteredItems = React.useMemo(() => {
-  //   let filteredUsers = [...users];
-
-  //   if (hasSearchFilter) {
-  //     filteredUsers = filteredUsers.filter((user) =>
-  //       user.name.toLowerCase().includes(filterValue.toLowerCase())
-  //     );
-  //   }
-  //   if (
-  //     statusFilter !== "all" &&
-  //     Array.from(statusFilter).length !== statusOptions.length
-  //   ) {
-  //     filteredUsers = filteredUsers.filter((user) =>
-  //       Array.from(statusFilter).includes(user.status)
-  //     );
-  //   }
-
-  //   return filteredUsers;
-  // }, [users, filterValue, statusFilter]);
-  // const items = React.useMemo(() => {
-  //   const start = (page - 1) * rowsPerPage;
-  //   const end = start + rowsPerPage;
-
-  //   return filteredItems.slice(start, end);
-  // }, [page, filteredItems, rowsPerPage]);
 
   const renderCell = React.useCallback(
     (item: TData, columnKey: keyof TData) => {
@@ -298,7 +249,7 @@ export function DataTable<TData>({
         </div>
         <div className="flex justify-between items-center">
           <span className={clsx(`text-default-400 text-${size}`)}>
-            共 {users.length} 条
+            共 {total} 条
           </span>
           <label
             className={clsx(`flex items-center text-default-400 text-${size}`)}>
@@ -322,7 +273,6 @@ export function DataTable<TData>({
     visibleColumns,
     onSearchChange,
     onRowsPerPageChange,
-    users.length,
     hasSearchFilter,
   ]);
 
@@ -344,7 +294,6 @@ export function DataTable<TData>({
           size={size}
           showShadow
           color="primary"
-          isDisabled={isMutating}
           page={page}
           total={pages}
           variant="light"
@@ -382,7 +331,7 @@ export function DataTable<TData>({
         )}
       </TableHeader>
       <TableBody
-        // emptyContent={"No users found"}
+        // emptyContent={"No data found"}
         items={sortedItems}
         loadingContent={<Spinner />}
         loadingState={
