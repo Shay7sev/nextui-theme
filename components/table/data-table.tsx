@@ -28,12 +28,6 @@ import { DataTableColumnProps } from "./interface";
 import { getSvgSize } from "@/utils";
 import useSWRMutation from "swr/mutation";
 
-const statusOptions = [
-  { name: "Active", uid: "active" },
-  { name: "Paused", uid: "paused" },
-  { name: "Vacation", uid: "vacation" },
-];
-
 export function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
@@ -76,12 +70,14 @@ export function DataTable<TData>({
   const [visibleColumns, setVisibleColumns] = React.useState<Selection>(
     new Set(INITIAL_VISIBLE_COLUMNS)
   );
-  const [statusFilter, setStatusFilter] = React.useState<Selection>("all");
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
-
   const [page, setPage] = React.useState(1);
   const [total, setTotal] = React.useState(1);
   const [data, setData] = React.useState([]);
+
+  const [searchParams, setSearchParams] = React.useState<{
+    [key: string]: any;
+  }>({});
 
   const hasSearchFilter = Boolean(filterValue);
 
@@ -113,19 +109,31 @@ export function DataTable<TData>({
   const { trigger, isMutating } = useSWRMutation("/", api /* options */);
 
   const asyncTrigger = React.useCallback(async () => {
-    let params = {
+    let params: {
+      [key: string]: any;
+    } = {
       currentPage: page,
       pageSize: rowsPerPage,
+      ...searchParams,
     };
-    const response = await trigger(params);
+    const response = await trigger(
+      Object.fromEntries(
+        Object.entries(params)
+          .filter(([_k, v]) => v != null)
+          .map(([key, value]) => [
+            key,
+            value instanceof Set ? Array.from(value) : value,
+          ])
+      )
+    );
     const data = response.data;
     setTotal(data.total);
     setData(data.list);
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, searchParams]);
 
   React.useEffect(() => {
     asyncTrigger();
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, searchParams]);
 
   const [sortDescriptor, setSortDescriptor] = React.useState<SortDescriptor>();
 
@@ -167,14 +175,30 @@ export function DataTable<TData>({
     setPage(val);
   }, []);
 
-  const onSearchChange = React.useCallback((value?: string) => {
-    if (value) {
-      setFilterValue(value);
-      setPage(1);
-    } else {
-      setFilterValue("");
+  const onInputChange = React.useCallback((value?: string, uid?: string) => {
+    if (value && uid) {
+      setSearchParams((obj) => {
+        return {
+          ...obj,
+          [uid]: value,
+        };
+      });
     }
   }, []);
+
+  const onSelectChange = React.useCallback(
+    (value?: Selection, uid?: string) => {
+      if (value && uid) {
+        setSearchParams((obj) => {
+          return {
+            ...obj,
+            [uid]: value,
+          };
+        });
+      }
+    },
+    []
+  );
 
   const onClear = React.useCallback(() => {
     setFilterValue("");
@@ -182,44 +206,65 @@ export function DataTable<TData>({
   }, []);
 
   const topContent = React.useMemo(() => {
+    let obj: { [key: string]: any } = {};
+    columns.map((column) => {
+      if (column.valueType) {
+        obj[column.uid] = undefined;
+      }
+    });
+    setSearchParams(obj);
     return (
       <div className="flex flex-col gap-4">
         <div className="flex justify-between gap-3 items-end">
           <div className="flex gap-3">
-            <Input
-              isClearable
-              size={size}
-              className="w-full sm:max-w-[44%] h-auto"
-              placeholder="Search by name..."
-              startContent={<SearchIcon size={getSvgSize(size)} />}
-              labelPlacement={"outside"}
-              value={filterValue}
-              onClear={() => onClear()}
-              onValueChange={onSearchChange}
-            />
-            <Dropdown>
-              <DropdownTrigger className="hidden sm:flex">
-                <Button
-                  variant="flat"
-                  size={size}
-                  endContent={<ChevronDownIcon className="text-small" />}>
-                  Status
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                disallowEmptySelection
-                aria-label="Table Columns"
-                closeOnSelect={false}
-                selectedKeys={statusFilter}
-                selectionMode="multiple"
-                onSelectionChange={setStatusFilter}>
-                {statusOptions.map((status) => (
-                  <DropdownItem key={status.uid} className="capitalize">
-                    {capitalize(status.name)}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
+            {columns.map((column) => {
+              if (column.valueType === "input") {
+                return (
+                  <Input
+                    key={column.uid}
+                    isClearable
+                    size={size}
+                    className="w-full sm:max-w-[44%] h-auto"
+                    placeholder={`搜索${column.name}`}
+                    startContent={<SearchIcon size={getSvgSize(size)} />}
+                    labelPlacement={"outside"}
+                    value={searchParams[column.uid]}
+                    onClear={() => onClear()}
+                    onValueChange={(val) => onInputChange(val, column.uid)}
+                  />
+                );
+              } else if (column.valueType === "select" && column.valueEnum) {
+                return (
+                  <Dropdown key={column.uid}>
+                    <DropdownTrigger className="hidden sm:flex">
+                      <Button
+                        variant="flat"
+                        className="w-full sm:max-w-[15%] h-auto"
+                        size={size}
+                        endContent={<ChevronDownIcon className="text-small" />}>
+                        {column.name}
+                      </Button>
+                    </DropdownTrigger>
+                    <DropdownMenu
+                      disallowEmptySelection
+                      aria-label="Table Columns"
+                      closeOnSelect={false}
+                      selectedKeys={searchParams[column.uid]}
+                      selectionMode="multiple"
+                      onSelectionChange={(val) =>
+                        onSelectChange(val, column.uid)
+                      }>
+                      {Array.from(column.valueEnum).map((item) => (
+                        <DropdownItem key={item[1]} className="capitalize">
+                          {capitalize(item[0])}
+                        </DropdownItem>
+                      ))}
+                    </DropdownMenu>
+                  </Dropdown>
+                );
+              }
+            })}
+
             {operationContent}
           </div>
           {setColumns ? (
@@ -268,10 +313,11 @@ export function DataTable<TData>({
       </div>
     );
   }, [
+    columns,
     filterValue,
-    statusFilter,
     visibleColumns,
-    onSearchChange,
+    onInputChange,
+    onSelectChange,
     onRowsPerPageChange,
     hasSearchFilter,
   ]);

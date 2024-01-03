@@ -26,6 +26,7 @@ export default function AboutPage() {
       name: "NAME",
       uid: "name",
       sortable: true,
+      valueType: "input",
       renderCell: (item, columnKey) => {
         return (
           <User
@@ -42,7 +43,7 @@ export default function AboutPage() {
         );
       },
     },
-    { name: "AGE", uid: "age", sortable: true },
+    { name: "AGE", uid: "age", sortable: true, valueType: "input" },
     {
       name: "ROLE",
       uid: "role",
@@ -64,6 +65,11 @@ export default function AboutPage() {
       name: "STATUS",
       uid: "status",
       sortable: true,
+      valueType: "select",
+      valueEnum: new Map([
+        ["active", "Active"],
+        ["paused", "Paused"],
+      ]),
       renderCell: (item, columnKey) => {
         return (
           <Chip
@@ -103,7 +109,7 @@ export default function AboutPage() {
     return (
       <Button
         color="primary"
-        className="hidden sm:flex"
+        className="hidden sm:flex w-full sm:max-w-[15%] h-auto"
         endContent={<PlusIcon size={getSvgSize()} />}
         size={"sm"}>
         Add New

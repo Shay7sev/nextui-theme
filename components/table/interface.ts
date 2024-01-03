@@ -8,6 +8,8 @@ export interface DataTableColumnProps<T = any>
   uid: string;
   name: string;
   sortable?: boolean;
+  valueType?: "input" | "select";
+  valueEnum?: Map<string, any>;
   renderCell?: (
     item: T,
     columnKey: keyof T
