@@ -63,7 +63,6 @@ export function DataTable<TData>({
   uniqueKey = "id",
   operationContent,
 }: DataTableProps<TData>) {
-  const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState<Selection>(
     new Set([""])
   );
@@ -79,15 +78,13 @@ export function DataTable<TData>({
     [key: string]: any;
   }>({});
 
-  const hasSearchFilter = Boolean(filterValue);
-
   const headerColumns = React.useMemo(() => {
     if (visibleColumns === "all") return columns;
 
     return columns.filter((column) =>
       Array.from(visibleColumns).includes(column.uid)
     );
-  }, [visibleColumns]);
+  }, [columns, visibleColumns]);
 
   const renderCell = React.useCallback(
     (item: TData, columnKey: keyof TData) => {
@@ -103,7 +100,7 @@ export function DataTable<TData>({
         return <></>;
       }
     },
-    []
+    [columns]
   );
 
   const { trigger, isMutating } = useSWRMutation("/", api /* options */);
@@ -129,11 +126,11 @@ export function DataTable<TData>({
     const data = response.data;
     setTotal(data.total);
     setData(data.list);
-  }, [page, rowsPerPage, searchParams]);
+  }, [page, rowsPerPage, searchParams, trigger]);
 
   React.useEffect(() => {
     asyncTrigger();
-  }, [page, rowsPerPage, searchParams]);
+  }, [asyncTrigger, page, rowsPerPage, searchParams]);
 
   const [sortDescriptor, setSortDescriptor] = React.useState<SortDescriptor>();
 
@@ -201,7 +198,6 @@ export function DataTable<TData>({
   );
 
   const onClear = React.useCallback(() => {
-    setFilterValue("");
     setPage(1);
   }, []);
 
@@ -306,13 +302,17 @@ export function DataTable<TData>({
       </div>
     );
   }, [
-    searchParams,
-    filterValue,
+    columns,
+    operationContent,
+    setColumns,
+    size,
     visibleColumns,
+    total,
+    onRowsPerPageChange,
+    searchParams,
+    onClear,
     onInputChange,
     onSelectChange,
-    onRowsPerPageChange,
-    hasSearchFilter,
   ]);
 
   const bottomContent = React.useMemo(() => {
@@ -340,7 +340,7 @@ export function DataTable<TData>({
         />
       </div>
     );
-  }, [selectedKeys, total, page, pages, hasSearchFilter]);
+  }, [selectionBehavior, size, selectedKeys, total, page, pages, onPageChange]);
 
   return (
     <Table

@@ -23,7 +23,8 @@ module.exports = {
         endOfLine: "auto",
       },
     ],
-    "react-hooks/exhaustive-deps": "off",
+    "react-hooks/rules-of-hooks": "error", // 检查 Hooks 的声明
+    "react-hooks/exhaustive-deps": "warn", // 检查依赖项的声明
     "react/display-name": "off",
     "import/no-anonymous-default-export": "off",
     "@typescript-eslint/no-unused-vars": [

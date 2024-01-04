@@ -24,42 +24,45 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
   const { theme, setTheme } = useTheme();
   const isSSR = useIsSSR();
 
-  const onChange = () => {
+  const onChange = useCallback(() => {
     theme === "light" ? setTheme("dark") : setTheme("light");
-  };
+  }, [theme, setTheme]);
 
   const canvasRef = useRef();
 
-  const handleSwitch = async (event: any) => {
-    const containerRef = document.getElementById("body");
-    const parentRef = document.getElementById("html");
+  const handleSwitch = useCallback(
+    async (event: any) => {
+      const containerRef = document.getElementById("body");
+      const parentRef = document.getElementById("html");
 
-    const canvas = await toCanvas(containerRef as any);
-    canvasRef.current = canvas as any;
-    (parentRef as any).appendChild(canvas);
-    setTimeout(() => {
-      crop(canvas, event, { reverse: theme === "dark" }).then(() => {
-        (parentRef as any).removeChild(canvas);
-      });
-      onChange();
-    }, 0.1);
+      const canvas = await toCanvas(containerRef as any);
+      canvasRef.current = canvas as any;
+      (parentRef as any).appendChild(canvas);
+      setTimeout(() => {
+        crop(canvas, event, { reverse: theme === "dark" }).then(() => {
+          (parentRef as any).removeChild(canvas);
+        });
+        onChange();
+      }, 0.1);
 
-    // toCanvas(containerRef as any).then((canvas: any) => {
-    //   canvasRef.current = canvas;
-    //   (parentRef as any).appendChild(canvas);
-    //   setTimeout(() => {
-    //     crop(canvas, event, { reverse: theme === "dark" }).then(() => {
-    //       (parentRef as any).removeChild(canvas);
-    //     });
-    //     onChange();
-    //   }, 0.1);
-    // });
-  };
+      // toCanvas(containerRef as any).then((canvas: any) => {
+      //   canvasRef.current = canvas;
+      //   (parentRef as any).appendChild(canvas);
+      //   setTimeout(() => {
+      //     crop(canvas, event, { reverse: theme === "dark" }).then(() => {
+      //       (parentRef as any).removeChild(canvas);
+      //     });
+      //     onChange();
+      //   }, 0.1);
+      // });
+    },
+    [onChange, theme]
+  );
 
   useEffect(() => {
     let e: any;
     false && handleSwitch(e);
-  }, []);
+  }, [handleSwitch]);
 
   const toggleTheme = useCallback(
     (event: React.MouseEvent<Element, MouseEvent>) => {
@@ -95,7 +98,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
         );
       });
     },
-    [theme]
+    [theme, onChange]
   );
 
   const {
