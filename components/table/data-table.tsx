@@ -206,13 +206,6 @@ export function DataTable<TData>({
   }, []);
 
   const topContent = React.useMemo(() => {
-    let obj: { [key: string]: any } = {};
-    columns.map((column) => {
-      if (column.valueType) {
-        obj[column.uid] = undefined;
-      }
-    });
-    setSearchParams(obj);
     return (
       <div className="flex flex-col gap-4">
         <div className="flex justify-between gap-3 items-end">
@@ -246,14 +239,14 @@ export function DataTable<TData>({
                       </Button>
                     </DropdownTrigger>
                     <DropdownMenu
-                      disallowEmptySelection
+                      disallowEmptySelection={false}
                       aria-label="Table Columns"
                       closeOnSelect={false}
                       selectedKeys={searchParams[column.uid]}
                       selectionMode="multiple"
-                      onSelectionChange={(val) =>
-                        onSelectChange(val, column.uid)
-                      }>
+                      onSelectionChange={(val) => {
+                        onSelectChange(val, column.uid);
+                      }}>
                       {Array.from(column.valueEnum).map((item) => (
                         <DropdownItem key={item[1]} className="capitalize">
                           {capitalize(item[0])}
@@ -313,7 +306,7 @@ export function DataTable<TData>({
       </div>
     );
   }, [
-    columns,
+    searchParams,
     filterValue,
     visibleColumns,
     onInputChange,
