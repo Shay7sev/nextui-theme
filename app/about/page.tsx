@@ -2,7 +2,7 @@
 
 import { Logo, PlusIcon, VerticalDotsIcon } from "@/components/icons";
 // import { title } from "@/components/primitives";
-import { DataTable } from "@/components/table/data-table";
+import { NextTable } from "@/components/table/index";
 import { DataTableColumnProps } from "@/components/table/interface";
 import { Chip } from "@nextui-org/chip";
 import { User } from "@nextui-org/user";
@@ -119,7 +119,7 @@ export default function AboutPage() {
   return (
     <div className="w-full h-auto">
       {/* <h1 className={title({ color: "violet" })}>About</h1> */}
-      <DataTable<ResUser>
+      <NextTable<ResUser>
         columns={columns}
         api={getAboutList}
         operationContent={operationContent}

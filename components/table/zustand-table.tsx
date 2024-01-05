@@ -24,15 +24,31 @@ import { Spinner } from "@nextui-org/spinner";
 import { ChevronDownIcon, SearchIcon } from "../icons";
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 import clsx from "clsx";
-import { DataTableProps } from "./interface";
+import { DataTableProps, TableState } from "./interface";
 import { getSvgSize } from "@/utils";
 import useSWRMutation from "swr/mutation";
+import { create } from "zustand";
+
+const searchParamsStore = create<TableState>((set) => ({
+  searchParams: {},
+  setSearchParams: (newSearchParams) =>
+    set((state) => ({
+      searchParams: Object.assign(state.searchParams, newSearchParams),
+    })),
+  page: 1,
+  setPage: (newPage) => set({ page: newPage }),
+  rowsPerPage: 5,
+  setRowsPerPage: (newRowsPerPage) => set({ rowsPerPage: newRowsPerPage }),
+  visibleColumns: "all",
+  setVisibleColumns: (newVisibleColumns) =>
+    set({ visibleColumns: newVisibleColumns }),
+}));
 
 export function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-export function DataTable<TData>({
+export function ZustandTable<TData>({
   size = "sm",
   selectionBehavior = "toggle",
   selectionMode = "none",
@@ -45,20 +61,22 @@ export function DataTable<TData>({
   const [selectedKeys, setSelectedKeys] = React.useState<Selection>(
     new Set([""])
   );
-  const [visibleColumns, setVisibleColumns] = React.useState<Selection>("all");
-
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
-  const [page, setPage] = React.useState(1);
   const [total, setTotal] = React.useState(1);
   const [data, setData] = React.useState([]);
 
-  const [searchParams, setSearchParams] = React.useState<{
-    [key: string]: any;
-  }>({});
+  const {
+    searchParams,
+    setSearchParams,
+    page,
+    setPage,
+    rowsPerPage,
+    setRowsPerPage,
+    visibleColumns,
+    setVisibleColumns,
+  } = searchParamsStore();
 
   const headerColumns = React.useMemo(() => {
     if (visibleColumns === "all") return columns;
-
     return columns.filter((column) =>
       Array.from(visibleColumns).includes(column.uid)
     );
@@ -126,58 +144,39 @@ export function DataTable<TData>({
     return Math.ceil(total / rowsPerPage);
   }, [total, rowsPerPage]);
 
-  // const onNextPage = React.useCallback(() => {
-  //   if (page < pages) {
-  //     setPage(page + 1);
-  //   }
-  // }, [page, pages]);
-
-  // const onPreviousPage = React.useCallback(() => {
-  //   if (page > 1) {
-  //     setPage(page - 1);
-  //   }
-  // }, [page]);
-
   const onRowsPerPageChange = React.useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       setRowsPerPage(Number(e.target.value));
       setPage(1);
     },
-    []
+    [setPage, setRowsPerPage]
   );
 
-  const onPageChange = React.useCallback((val: number) => {
-    setPage(val);
-  }, []);
-
-  const onInputChange = React.useCallback((value?: string, uid?: string) => {
-    if (value && uid) {
-      setSearchParams((obj) => {
-        return {
-          ...obj,
+  const onInputChange = React.useCallback(
+    (value?: string, uid?: string) => {
+      if (value && uid) {
+        setSearchParams({
           [uid]: value,
-        };
-      });
-    }
-  }, []);
+        });
+      }
+    },
+    [setSearchParams]
+  );
 
   const onSelectChange = React.useCallback(
     (value?: Selection, uid?: string) => {
       if (value && uid) {
-        setSearchParams((obj) => {
-          return {
-            ...obj,
-            [uid]: value,
-          };
+        setSearchParams({
+          [uid]: value,
         });
       }
     },
-    []
+    [setSearchParams]
   );
 
   const onClear = React.useCallback(() => {
     setPage(1);
-  }, []);
+  }, [setPage]);
 
   const topContent = React.useMemo(() => {
     return (
@@ -247,7 +246,7 @@ export function DataTable<TData>({
                 closeOnSelect={false}
                 selectedKeys={visibleColumns}
                 selectionMode="multiple"
-                onSelectionChange={setVisibleColumns}>
+                onSelectionChange={(val) => setVisibleColumns(val)}>
                 {columns.map((column) => (
                   <DropdownItem key={column.uid} className="capitalize">
                     {capitalize(column.name)}
@@ -270,6 +269,7 @@ export function DataTable<TData>({
               className={clsx(
                 `bg-transparent outline-none text-default-400 text-${size}`
               )}
+              value={rowsPerPage}
               onChange={onRowsPerPageChange}>
               <option value="5">5</option>
               <option value="10">10</option>
@@ -286,11 +286,13 @@ export function DataTable<TData>({
     size,
     visibleColumns,
     total,
+    rowsPerPage,
     onRowsPerPageChange,
     searchParams,
     onClear,
     onInputChange,
     onSelectChange,
+    setVisibleColumns,
   ]);
 
   const bottomContent = React.useMemo(() => {
@@ -314,11 +316,17 @@ export function DataTable<TData>({
           page={page}
           total={pages}
           variant="light"
-          onChange={onPageChange}
+          disableCursorAnimation
+          disableAnimation
+          classNames={{
+            item: "!rounded-xl",
+          }}
+          radius="full"
+          onChange={setPage}
         />
       </div>
     );
-  }, [selectionBehavior, size, selectedKeys, total, page, pages, onPageChange]);
+  }, [selectionBehavior, size, selectedKeys, total, page, pages, setPage]);
 
   return (
     <Table
@@ -348,7 +356,6 @@ export function DataTable<TData>({
         )}
       </TableHeader>
       <TableBody
-        // emptyContent={"No data found"}
         items={sortedItems}
         loadingContent={<Spinner />}
         loadingState={
