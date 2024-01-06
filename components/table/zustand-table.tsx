@@ -24,25 +24,10 @@ import { Spinner } from "@nextui-org/spinner";
 import { ChevronDownIcon, SearchIcon } from "../icons";
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 import clsx from "clsx";
-import { DataTableProps, TableState } from "./interface";
+import { DataTableProps } from "./interface";
 import { getSvgSize } from "@/utils";
 import useSWRMutation from "swr/mutation";
-import { create } from "zustand";
-
-const searchParamsStore = create<TableState>((set) => ({
-  searchParams: {},
-  setSearchParams: (newSearchParams) =>
-    set((state) => ({
-      searchParams: Object.assign(state.searchParams, newSearchParams),
-    })),
-  page: 1,
-  setPage: (newPage) => set({ page: newPage }),
-  rowsPerPage: 5,
-  setRowsPerPage: (newRowsPerPage) => set({ rowsPerPage: newRowsPerPage }),
-  visibleColumns: "all",
-  setVisibleColumns: (newVisibleColumns) =>
-    set({ visibleColumns: newVisibleColumns }),
-}));
+import { searchParamsStore } from "./table-store";
 
 export function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -75,6 +60,10 @@ export function ZustandTable<TData>({
     setVisibleColumns,
   } = searchParamsStore();
 
+  const pages = React.useMemo(() => {
+    return Math.ceil(total / rowsPerPage);
+  }, [total, rowsPerPage]);
+
   const headerColumns = React.useMemo(() => {
     if (visibleColumns === "all") return columns;
     return columns.filter((column) =>
@@ -102,12 +91,30 @@ export function ZustandTable<TData>({
   const { trigger, isMutating } = useSWRMutation("/", api /* options */);
 
   const asyncTrigger = React.useCallback(async () => {
+    // 过滤 searchParams
+    const filteredSearchParams = columns
+      .filter((m) => m.valueType)
+      .reduce(
+        (
+          acc: {
+            [key: string]: any;
+          },
+          curr
+        ) => {
+          const { uid } = curr;
+          if (searchParams.hasOwnProperty(uid)) {
+            acc[uid] = searchParams[uid];
+          }
+          return acc;
+        },
+        {}
+      );
     let params: {
       [key: string]: any;
     } = {
       currentPage: page,
       pageSize: rowsPerPage,
-      ...searchParams,
+      ...filteredSearchParams,
     };
     const response = await trigger(
       Object.fromEntries(
@@ -122,7 +129,9 @@ export function ZustandTable<TData>({
     const data = response.data;
     setTotal(data.total);
     setData(data.list);
-  }, [page, rowsPerPage, searchParams, trigger]);
+    // 设置 currentPage
+    if (page > Math.ceil(data.total / rowsPerPage)) setPage(1);
+  }, [columns, page, rowsPerPage, searchParams, setPage, trigger]);
 
   React.useEffect(() => {
     asyncTrigger();
@@ -139,10 +148,6 @@ export function ZustandTable<TData>({
       return sortDescriptor?.direction === "descending" ? -cmp : cmp;
     });
   }, [sortDescriptor, data]);
-
-  const pages = React.useMemo(() => {
-    return Math.ceil(total / rowsPerPage);
-  }, [total, rowsPerPage]);
 
   const onRowsPerPageChange = React.useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {

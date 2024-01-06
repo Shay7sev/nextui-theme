@@ -10,3 +10,12 @@ export function getAboutList(_url: string = "", { arg }: { arg: ReqUser }) {
     data: arg,
   });
 }
+
+export function getDocsList(_url: string = "", { arg }: { arg: ReqUser }) {
+  return httpfetch<ResultData<ResPage<ResUser>>>({
+    url: "/get-page-docs",
+    method: "GET",
+    // body: JSON.stringify(arg),
+    data: arg,
+  });
+}

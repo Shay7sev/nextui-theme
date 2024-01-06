@@ -122,6 +122,7 @@ export default function AboutPage() {
       <NextTable<ResUser>
         columns={columns}
         api={getAboutList}
+        useZustand={true}
         operationContent={operationContent}
       />
     </div>
