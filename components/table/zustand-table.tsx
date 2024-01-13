@@ -159,7 +159,7 @@ export function ZustandTable<TData>({
 
   const onInputChange = React.useCallback(
     (value?: string, uid?: string) => {
-      if (value && uid) {
+      if (uid) {
         setSearchParams({
           [uid]: value,
         });

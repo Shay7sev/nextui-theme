@@ -151,7 +151,7 @@ export function DataTable<TData>({
   }, []);
 
   const onInputChange = React.useCallback((value?: string, uid?: string) => {
-    if (value && uid) {
+    if (uid) {
       setSearchParams((obj) => {
         return {
           ...obj,
